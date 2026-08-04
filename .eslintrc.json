@@ -1,0 +1,21 @@
+{
+  "env": {
+    "browser": false,
+    "node": false
+  },
+  "parserOptions": {
+    "ecmaVersion": 3
+  },
+  "globals": {
+    "app": "readonly",
+    "alert": "readonly",
+    "File": "readonly",
+    "Folder": "readonly",
+    "Window": "readonly",
+    "$.navigator": "readonly"
+  },
+  "rules": {
+    "no-undef": "error",
+    "no-unused-vars": "warn"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "es3",
+    "checkJs": false
+  },
+  "include": [
+    "**/*.js",
+    "**/*.jsx",
+    "node_modules/types-for-adobe/illustrator/**/*.d.ts"
+  ]
+}

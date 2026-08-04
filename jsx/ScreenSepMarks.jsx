@@ -455,7 +455,34 @@ Changelog
     return;
   }
 
-  // setup script defaults
+  /**
+   * Settings object used for dialog state and saved presets.
+   * @typedef {Object} Settings
+   * @property {Boolean} tl - Top-left registration mark enabled.
+   * @property {Boolean} tc - Top-center registration mark enabled.
+   * @property {Boolean} tr - Top-right registration mark enabled.
+   * @property {Boolean} cl - Center-left registration mark enabled.
+   * @property {Boolean} cc - Center-center registration mark enabled.
+   * @property {Boolean} cr - Center-right registration mark enabled.
+   * @property {Boolean} bl - Bottom-left registration mark enabled.
+   * @property {Boolean} bc - Bottom-center registration mark enabled.
+   * @property {Boolean} br - Bottom-right registration mark enabled.
+   * @property {String} size - Mark size, stored as a unit string.
+   * @property {String} stroke - Stroke width, stored as a unit string.
+   * @property {String} inset - Inset distance from artboard edge, stored as a unit string.
+   * @property {Boolean} invertinset - Whether inset is inverted.
+   * @property {String} color - Spot swatch name used for registration marks.
+   * @property {Boolean} blanktextbox - Whether to add a blank custom text box.
+   * @property {Boolean} spots - Whether to add spot color names to the artwork.
+   * @property {Boolean} file - Whether to include file information text.
+   * @property {Boolean} timestamp - Whether to include timestamp text.
+   * @property {String} position - Output text vertical position, either "Top" or "Bottom".
+   * @property {String} alignment - Output text horizontal alignment, either "Left" or "Right".
+   */
+
+  /**
+   * Built-in default settings stored as the "[Default]" preset.
+   */
   var defaults = {};
   defaults["[Default]"] = {
     tl: true,
@@ -535,6 +562,12 @@ Changelog
   // SCRIPT DRAWING FUNCTIONS //
   //////////////////////////////
 
+  /**
+   * Find or create a work layer for the script and clear its contents if necessary.
+   *
+   * @param {String} name - Name of the layer to use or create.
+   * @returns {Layer} The work layer for drawing marks and text.
+   */
   function createWorkLayer(name) {
     var layer;
     try {
@@ -552,6 +585,12 @@ Changelog
     return layer;
   }
 
+  /**
+   * Return a spot swatch by name, falling back to [Registration] if missing.
+   *
+   * @param {String} name - Spot swatch name to look up.
+   * @returns {Spot} The requested spot swatch or the registration swatch.
+   */
   function getSpotColor(name) {
     var color;
     try {
@@ -568,6 +607,12 @@ Changelog
     return color;
   }
 
+  /**
+   * Draw registration marks based on the current settings.
+   *
+   * @param {Layer} layer - The layer where marks should be created.
+   * @param {Settings} settings - Dialog settings controlling placement, size, color, and inset.
+   */
   function drawMarks(layer, settings) {
     // convert provided inputs to points
     var size = UnitValue(settings.size).as("pt");
@@ -606,46 +651,101 @@ Changelog
         prop,
         "at (" + marks[prop].x + ", " + marks[prop].y + ")",
       );
-      makeReg(layer, marks[prop].x, marks[prop].y, size, color, stroke);
+
+      var rotation = 0;
+      var center = false;
+      if (prop === "tr") {
+        rotation = 90;
+      } else if (prop === "br") {
+        rotation = 0;
+      } else if (prop === "bl") {
+        rotation = 270;
+      } else if (prop === "tl") {
+        rotation = 180;
+      } else if (prop === "tc") {
+        rotation = 180;
+        center = true;
+      } else if (prop === "bc") {
+        rotation = 0;
+        center = true;
+      } else if (prop === "cr") {
+        rotation = 90;
+        center = true;
+      } else if (prop === "cl") {
+        rotation = -90;
+        center = true;
+      }
+
+      makeReg(
+        layer,
+        marks[prop].x,
+        marks[prop].y,
+        size,
+        color,
+        rotation,
+        stroke,
+        center
+      );
     }
   }
 
-  function makeReg(layer, x, y, size, color, strokeWeight) {
+  /**
+   * Create a registration mark at a specific point on the given layer.
+   *
+   * @param {Layer} layer - The Illustrator layer to add the mark to.
+   * @param {Number} x - The horizontal center position for the mark.
+   * @param {Number} y - The vertical center position for the mark.
+   * @param {Number} size - The overall size of the mark (width and height of the crosshair).
+   * @param {SpotColor} color - The spot color to use for both lines.
+   * @param {Number} rotation - The rotation angle for the mark, in degrees.
+   * @param {Number} strokeWeight - The stroke width for the mark lines, in points.
+   * @param {Boolean} center - Whether the mark is a center mark (single line) or a corner mark (L-shaped). If true, the mark is centered at (x, y); if false, the mark's bottom-left corner is at (x, y).
+   */
+  function makeReg(layer, x, y, size, color, rotation, strokeWeight, center) {
     // make a group to hold reg mark parts
-    var regGroup = layer.groupItems.add();
-    // draw circle part
-    var circle = regGroup.pathItems.ellipse(
-      -y + size / 2 / 2,
-      x - size / 2 / 2,
-      size / 2,
-      size / 2,
-    );
-    circle.strokeColor = color;
-    circle.stroked = true;
-    circle.strokeWidth = strokeWeight;
-    circle.filled = false;
-    // draw x-line part
-    var xLine = regGroup.pathItems.add();
-    xLine.setEntirePath([
-      [x - size / 2, -y],
-      [x + size / 2, -y],
-    ]);
-    xLine.strokeColor = color;
-    xLine.stroked = true;
-    xLine.strokeWidth = strokeWeight;
-    xLine.filled = false;
-    // draw y-line part
-    var yLine = regGroup.pathItems.add();
-    yLine.setEntirePath([
-      [x, -y + size / 2],
-      [x, -y - size / 2],
-    ]);
-    yLine.strokeColor = color;
-    yLine.stroked = true;
-    yLine.strokeWidth = strokeWeight;
-    yLine.filled = false;
+      var regGroup = layer.groupItems.add();
+      if (!center) {
+      // draw an L-shaped mark with the bottom-left corner at the provided point
+      var xLine = regGroup.pathItems.add();
+      xLine.setEntirePath([
+        [x, -y],
+        [x + size, -y],
+      ]);
+      xLine.strokeColor = color;
+      xLine.stroked = true;
+      xLine.strokeWidth = strokeWeight;
+      xLine.filled = false;
+      var yLine = regGroup.pathItems.add();
+      yLine.setEntirePath([
+        [x, -y],
+        [x, -y - size],
+      ]);
+      yLine.strokeColor = color;
+      yLine.stroked = true;
+      yLine.strokeWidth = strokeWeight;
+      yLine.filled = false;
+      regGroup.rotate(rotation, true, true, true, true, Transformation.TOPLEFT);
+    } else {
+      //make a center mark instead
+      var yLine = regGroup.pathItems.add();
+      yLine.setEntirePath([
+        [x, -y],
+        [x, -y - size],
+      ]);
+      yLine.strokeColor = color;
+      yLine.stroked = true;
+      yLine.strokeWidth = strokeWeight;
+      yLine.filled = false;
+      regGroup.rotate(rotation, true, true, true, true, Transformation.TOP);
+    }
   }
 
+  /**
+   * Add optional information text to the work layer.
+   *
+   * @param {Layer} layer - The layer to add text frames to.
+   * @param {Settings} settings - Dialog settings controlling which text output is created.
+   */
   function writeInfo(layer, settings) {
     var registrationColor = swatches.getByName("[Registration]");
     //insert blank textbox for custom data
@@ -662,7 +762,7 @@ Changelog
 
 
         // add spot color name to text frame
-        tr = spotColorTextFrame.words.add("Add custom imfo here.");
+        tr = spotColorTextFrame.words.add("Add custom info here.");
 
       // move text horizontally
       spotColorTextFrame.textRange.justification =
@@ -739,6 +839,11 @@ Changelog
   // MAIN SCRIPT DIALOG //
   ////////////////////////
 
+  /**
+   * Show the script settings dialog and return the selected options.
+   *
+   * @returns {Object|Boolean} settings object if OK was clicked, or false if canceled.
+   */
   function dialog() {
     var s = "[Default]";
 
@@ -981,8 +1086,9 @@ Changelog
     /////////////////////////////
 
     /**
-     * Load preset data into.
-     * @param {String} k Key for preset lookup. Defaults to '[Default]'.
+     * Load preset values into the dialog controls.
+     *
+     * @param {String} k - Preset key name to load.
      */
     function loadPreset(k) {
       // no need to load after saving a preset
@@ -1047,8 +1153,9 @@ Changelog
     }
 
     /**
-     * Load built-in and user presets into the `preset` dropdown list.
-     * @returns {Array} Available presets, sorted by built-in, then all user presets (sorted by name).
+     * Populate the preset dropdown with built-in and saved presets.
+     *
+     * @returns {Array} Sorted preset names for the dropdown.
      */
     function loadPresetsDropdown() {
       preset.removeAll();
@@ -1077,8 +1184,9 @@ Changelog
     }
 
     /**
-     * Format the current dialog setting into an a proper object.
-     * @returns {Object} Current dialog settings.
+     * Read current dialog values and format them for saving or execution.
+     *
+     * @returns {Settings} The current dialog settings object.
      */
     function getCurrentDialogSettings() {
       return {
