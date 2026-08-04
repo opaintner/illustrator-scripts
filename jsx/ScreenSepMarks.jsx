@@ -505,6 +505,7 @@ Changelog
     timestamp: false,
     position: "Top",
     alignment: "Left",
+    referenceObject: 0,
   };
 
   // grab document and swatch info
@@ -626,6 +627,8 @@ Changelog
     if (settings.invertinset){
       inset = inset * -1
     }
+
+    if (settings.referenceObject == 0) {
     // calculate artboard edges
     var top = inset + size / 2;
     var bottom = doc.height - inset - size / 2;
@@ -643,6 +646,34 @@ Changelog
       bc: { x: centerX, y: bottom },
       br: { x: right, y: bottom },
     };
+  } else if (settings.referenceObject == 1) {
+    // calculate selection visible bounds
+    if (doc.selection.length == 0) {
+      alert("No selection found. Please select an object to use as a reference.");
+      return;
+    }
+    alert("Selection found. Using selection bounds as reference for registration marks.");
+    var selBounds = doc.selection[0].visibleBounds;
+    alert("Selection bounds: " + selBounds);
+    var top = selBounds[1]*-1;
+    var bottom = selBounds[3]*-1;
+    var left = selBounds[0];
+    var right = selBounds[2];
+    var centerX = (left + right) / 2;
+    var centerY = (top + bottom) / 2;
+    //TODO: IMPLEMENT OFFSETS FOR INSET VALUES
+    //TODO: IMPLEMENT TEXT BOXES FOR INSIDE REGMARKS
+    var marks = {
+      tl: { x: left, y: top },
+      tc: { x: centerX, y: top },
+      tr: { x: right, y: top },
+      cl: { x: left, y: centerY },
+      cr: { x: right, y: centerY },
+      bl: { x: left, y: bottom },   
+      bc: { x: centerX, y: bottom },
+      br: { x: right, y: bottom },
+    };
+  }
 
     for (var prop in marks) {
       if (!settings[prop]) continue;
@@ -654,26 +685,35 @@ Changelog
 
       var rotation = 0;
       var center = false;
+      var name = "";
       if (prop === "tr") {
         rotation = 90;
+        name = "tr";
       } else if (prop === "br") {
         rotation = 0;
+        name = "br";
       } else if (prop === "bl") {
         rotation = 270;
+        name = "bl";
       } else if (prop === "tl") {
         rotation = 180;
+        name = "tl";
       } else if (prop === "tc") {
         rotation = 180;
         center = true;
+        name = "tc";
       } else if (prop === "bc") {
         rotation = 0;
         center = true;
+        name = "bc";
       } else if (prop === "cr") {
         rotation = 90;
         center = true;
+        name = "cr";
       } else if (prop === "cl") {
         rotation = -90;
         center = true;
+        name = "cl";
       }
 
       makeReg(
@@ -684,7 +724,8 @@ Changelog
         color,
         rotation,
         stroke,
-        center
+        center,
+        name
       );
     }
   }
@@ -701,7 +742,7 @@ Changelog
    * @param {Number} strokeWeight - The stroke width for the mark lines, in points.
    * @param {Boolean} center - Whether the mark is a center mark (single line) or a corner mark (L-shaped). If true, the mark is centered at (x, y); if false, the mark's bottom-left corner is at (x, y).
    */
-  function makeReg(layer, x, y, size, color, rotation, strokeWeight, center) {
+  function makeReg(layer, x, y, size, color, rotation, strokeWeight, center, name) {
     // make a group to hold reg mark parts
       var regGroup = layer.groupItems.add();
       if (!center) {
@@ -738,6 +779,7 @@ Changelog
       yLine.filled = false;
       regGroup.rotate(rotation, true, true, true, true, Transformation.TOP);
     }
+    regGroup.name = "RegMark_" + name;
   }
 
   /**
@@ -864,6 +906,19 @@ Changelog
     win.orientation = "column";
     win.alignChildren = ["fill", "center"];
     win.margins = 16;
+
+    // Panel - Reference Object
+    var pReference = win.add("panel", undefined, "Reference Object");
+    pReference.orientation = "row";
+    pReference.alignChildren = ["center", "top"];
+    pReference.margins = 18;
+    var items = ["Artboard", "Selection"];
+    var referenceObject = pReference.add("dropdownlist", undefined, items);
+    if (doc.selection.length > 0) {
+      referenceObject.items[1].enabled = true;
+    } else {
+      referenceObject.items[1].enabled = false;
+    }
 
     // Panel - Registration
     var pRegistration = win.add("panel", undefined, "Registration Marks");
@@ -1210,6 +1265,7 @@ Changelog
         timestamp: timestamp.value,
         position: position.selection.text,
         alignment: alignment.selection.text,
+        referenceObject: referenceObject.selection
       };
     }
 
