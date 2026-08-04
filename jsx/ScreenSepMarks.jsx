@@ -458,20 +458,22 @@ Changelog
   // setup script defaults
   var defaults = {};
   defaults["[Default]"] = {
-    tl: false,
-    tc: true,
-    tr: false,
+    tl: true,
+    tc: false,
+    tr: true,
     cl: false,
     cc: false,
     cr: false,
-    bl: false,
-    bc: true,
-    br: false,
+    bl: true,
+    bc: false,
+    br: true,
     size: "0.5 in",
     stroke: "1.0 pt",
-    inset: "0.25 in",
+    inset: "0.1 in",
     color: "[Registration]",
-    spots: true,
+    invertinset: false,
+    blanktextbox: true,
+    spots: false,
     file: false,
     timestamp: false,
     position: "Top",
@@ -571,11 +573,14 @@ Changelog
     var size = UnitValue(settings.size).as("pt");
     var stroke = UnitValue(settings.stroke).as("pt");
     var inset = UnitValue(settings.inset).as("pt");
-
     // make sure spot color is available
     var color = new SpotColor();
     color.spot = getSpotColor(settings.color);
 
+    //invert inset value, if applicable
+    if (settings.invertinset){
+      inset = inset * -1
+    }
     // calculate artboard edges
     var top = inset + size / 2;
     var bottom = doc.height - inset - size / 2;
@@ -643,7 +648,32 @@ Changelog
 
   function writeInfo(layer, settings) {
     var registrationColor = swatches.getByName("[Registration]");
+    //insert blank textbox for custom data
+    if (settings.blanktextbox) {
 
+      // create a text frame
+      var spotColorTextFrame = layer.textFrames.add();
+      spotColorTextFrame.textRange.characterAttributes.size = 9;
+      spotColorTextFrame.textRange.fillColor = registrationColor.color;
+      spotColorTextFrame.top =
+        settings.position == "Top"
+          ? 0
+          : -doc.height + spotColorTextFrame.height;
+
+
+        // add spot color name to text frame
+        tr = spotColorTextFrame.words.add("Add custom imfo here.");
+
+      // move text horizontally
+      spotColorTextFrame.textRange.justification =
+        settings.alignment == "Right"
+          ? Justification.RIGHT
+          : Justification.LEFT;
+      spotColorTextFrame.left =
+        settings.alignment == "Right"
+          ? doc.width - spotColorTextFrame.width
+          : 0;
+    }
     // insert spot color info first
     if (settings.spots) {
       // create a text frame
@@ -819,6 +849,8 @@ Changelog
     });
     stInset.justify = "right";
     stInset.preferredSize.width = 60;
+    //add option to negate inset
+    var invertinset = gInset.add("checkbox", undefined, "Invert Inset");
 
     var inset = gInset.add(
       'edittext {justify: "center", properties: {name: "inset"}}',
@@ -855,7 +887,10 @@ Changelog
     gOutputOptions.orientation = "row";
     gOutputOptions.alignChildren = ["left", "center"];
 
+    // added option for a blank textbox
+    var blanktextbox = gOutputOptions.add("checkbox", undefined, "Add Blank Textbox");
     var spots = gOutputOptions.add("checkbox", undefined, "Spot Colors");
+    
     var file = gOutputOptions.add("checkbox", undefined, "File Info");
     var timestamp = gOutputOptions.add("checkbox", undefined, "Timestamp");
 
@@ -1059,7 +1094,9 @@ Changelog
         size: UnitValue(size.text).toString(),
         stroke: UnitValue(stroke.text).toString(),
         inset: UnitValue(inset.text).toString(),
+        invertinset:invertinset,
         color: color.selection.text,
+        blanktextbox: blanktextbox.value,
         spots: spots.value,
         file: file.value,
         timestamp: timestamp.value,
