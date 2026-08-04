@@ -49,7 +49,7 @@ Changelog
 (function () {
   var scriptTitle = "Screen Print Separation Marks";
   var scriptVersion = "1.2.4";
-  var scriptCopyright = "Copyright 2026 Josh Duncan";
+  var scriptCopyright = "Copyright 2026 Josh Duncan, Customized by Owen Paintner for TOPS";
   var website = "joshbduncan.com";
 
   //////////////
