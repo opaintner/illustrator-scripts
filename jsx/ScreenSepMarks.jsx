@@ -267,9 +267,23 @@ Changelog
     if (typeof this.logger == "undefined") {
       this.logger = {};
       this.logger.log = function (text) {
-        args = [];
+        var args = [];
         for (var i = 0; i < arguments.length; ++i) args.push(arguments[i]);
         $.writeln(args.join(" "));
+      };
+      this.logger.open = function () {
+        try {
+          this.file.execute();
+        } catch (e) {
+          $.writeln("Unable to open log file:", e);
+        }
+      };
+      this.logger.reveal = function () {
+        try {
+          this.file.parent.execute();
+        } catch (e) {
+          $.writeln("Unable to reveal prefs folder:", e);
+        }
       };
     }
   }
@@ -304,13 +318,26 @@ Changelog
         try {
           json = readJSONData(f);
         } catch (e) {
-          f.rename(f.name + ".bak");
-          this.reveal();
-          Error.runtimeError(
-            1,
-            "Error!\nPreferences file error. Backup created.",
-          );
-          return false;
+          // Don't rename/reveal the prefs file (no noisy .bak on every launch).
+          // Instead, attempt to copy the corrupt file to a timestamped .corrupt file
+          // for later inspection and continue using defaults.
+          try {
+            var ts = Date.now();
+            var corruptFile = new File(f + "." + ts + ".corrupt");
+            f.copy(corruptFile);
+            alert(
+              "Preferences file parse error. A backup was written to:\n" +
+                corruptFile,
+            );
+          } catch (ex) {
+            alert(
+              "Preferences file parse error. Failed to create backup.\nOriginal file:\n" +
+                f,
+            );
+            this.logger.log("prefs parse error; backup failed:", ex);
+          }
+          json = {};
+          json.data = defaultData;
         }
       } else {
         json = {};
@@ -1117,6 +1144,11 @@ Changelog
     gButtons.alignChildren = ["center", "center"];
     gButtons.margins = 10;
 
+    var btViewFiles = gButtons.add("button", undefined, "View Files", {
+      name: "btViewFiles",
+    });
+    btViewFiles.preferredSize.width = 100;
+
     var btOK = gButtons.add("button", undefined, "OK", { name: "btOK" });
     btOK.preferredSize.width = 100;
 
@@ -1244,28 +1276,41 @@ Changelog
      * @returns {Settings} The current dialog settings object.
      */
     function getCurrentDialogSettings() {
+      // Return only primitive, serializable values (no host/UI objects)
       return {
-        tl: tl.value,
-        tc: tc.value,
-        tr: tr.value,
-        cl: cl.value,
-        cc: cc.value,
-        cr: cr.value,
-        bl: bl.value,
-        bc: bc.value,
-        br: br.value,
+        tl: !!tl.value,
+        tc: !!tc.value,
+        tr: !!tr.value,
+        cl: !!cl.value,
+        cc: !!cc.value,
+        cr: !!cr.value,
+        bl: !!bl.value,
+        bc: !!bc.value,
+        br: !!br.value,
         size: UnitValue(size.text).toString(),
         stroke: UnitValue(stroke.text).toString(),
         inset: UnitValue(inset.text).toString(),
-        invertinset:invertinset,
-        color: color.selection.text,
-        blanktextbox: blanktextbox.value,
-        spots: spots.value,
-        file: file.value,
-        timestamp: timestamp.value,
-        position: position.selection.text,
-        alignment: alignment.selection.text,
-        referenceObject: referenceObject.selection
+        invertinset: !!invertinset.value,
+        color:
+          color.selection && color.selection.text
+            ? color.selection.text
+            : "[Registration]",
+        blanktextbox: !!blanktextbox.value,
+        spots: !!spots.value,
+        file: !!file.value,
+        timestamp: !!timestamp.value,
+        position:
+          position.selection && position.selection.text
+            ? position.selection.text
+            : "Top",
+        alignment:
+          alignment.selection && alignment.selection.text
+            ? alignment.selection.text
+            : "Left",
+        referenceObject:
+          referenceObject.selection != null
+            ? referenceObject.selection.index
+            : 0,
       };
     }
 
@@ -1402,6 +1447,57 @@ Changelog
       preset.selection = preset.find(saveName);
 
       savingPreset = false;
+    };
+
+    btViewFiles.onClick = function () {
+      var logPath = logger.file ? logger.file.fsName : "(no log path set)";
+      var prefsPath = prefs.file ? prefs.file.fsName : "(no prefs path set)";
+
+      var viewWin = new Window("dialog");
+      viewWin.text = "Open Log / Prefs";
+      viewWin.orientation = "column";
+      viewWin.alignChildren = ["fill", "top"];
+      viewWin.margins = 16;
+      viewWin.spacing = 10;
+
+      viewWin.add("statictext", undefined, "Log file:");
+      viewWin.add("statictext", undefined, logPath);
+      viewWin.add("statictext", undefined, "");
+      viewWin.add("statictext", undefined, "Prefs file:");
+      viewWin.add("statictext", undefined, prefsPath);
+
+      var buttonGroup = viewWin.add("group", undefined);
+      buttonGroup.orientation = "row";
+      buttonGroup.alignChildren = ["center", "center"];
+      buttonGroup.spacing = 10;
+
+      var openLog = buttonGroup.add("button", undefined, "Open Log");
+      var openPrefs = buttonGroup.add("button", undefined, "Open Prefs");
+      var closeButton = buttonGroup.add("button", undefined, "Close");
+
+      openLog.onClick = function () {
+        if (typeof logger.open === "function") {
+          logger.open();
+        } else if (logger.file) {
+          logger.file.execute();
+        } else {
+          alert("Log file is not available.");
+        }
+      };
+      openPrefs.onClick = function () {
+        if (typeof prefs.reveal === "function") {
+          prefs.reveal();
+        } else if (prefs.file) {
+          prefs.file.parent.execute();
+        } else {
+          alert("Prefs file is not available.");
+        }
+      };
+      closeButton.onClick = function () {
+        viewWin.close();
+      };
+
+      viewWin.show();
     };
 
     stCopyright.addEventListener("click", function (e) {
