@@ -664,14 +664,14 @@ Changelog
     //TODO: IMPLEMENT OFFSETS FOR INSET VALUES
     //TODO: IMPLEMENT TEXT BOXES FOR INSIDE REGMARKS
     var marks = {
-      tl: { x: left, y: top },
-      tc: { x: centerX, y: top },
-      tr: { x: right, y: top },
-      cl: { x: left, y: centerY },
-      cr: { x: right, y: centerY },
-      bl: { x: left, y: bottom },   
-      bc: { x: centerX, y: bottom },
-      br: { x: right, y: bottom },
+      tl: { x: left + inset, y: top + inset },
+      tc: { x: centerX, y: top + inset },
+      tr: { x: right - inset, y: top + inset },
+      cl: { x: left+inset, y: centerY },
+      cr: { x: right-inset, y: centerY },
+      bl: { x: left + inset, y: bottom - inset },   
+      bc: { x: centerX, y: bottom - inset },
+      br: { x: right - inset, y: bottom - inset },
     };
   }
 
