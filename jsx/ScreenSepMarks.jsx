@@ -664,14 +664,14 @@ Changelog
     var centerX = doc.width / 2;
     var centerY = doc.height / 2;
     var marks = {
-      tl: { x: left, y: top },
-      tc: { x: centerX, y: inset + size / 2 },
-      tr: { x: right, y: inset + size / 2 },
-      cl: { x: inset + size / 2, y: centerY },
-      cr: { x: right, y: centerY },
-      bl: { x: inset + size / 2, y: bottom },
-      bc: { x: centerX, y: bottom },
-      br: { x: right, y: bottom },
+      tl: { x: left - size / 2, y: top - size / 2 },
+      tc: { x: centerX, y: top - size / 2 },
+      tr: { x: right + size / 2, y: top - size / 2 },
+      cl: { x: left - size / 2, y: centerY },
+      cr: { x: right + size / 2, y: centerY },
+      bl: { x: left - size / 2, y: bottom + size / 2 },
+      bc: { x: centerX, y: bottom + size / 2 },
+      br: { x: right + size / 2, y: bottom + size / 2 },
     };
   } else if (settings.referenceObject == 1) {
     // calculate selection visible bounds
@@ -688,8 +688,6 @@ Changelog
     var right = selBounds[2];
     var centerX = (left + right) / 2;
     var centerY = (top + bottom) / 2;
-    //TODO: IMPLEMENT OFFSETS FOR INSET VALUES
-    //TODO: IMPLEMENT TEXT BOXES FOR INSIDE REGMARKS
     var marks = {
       tl: { x: left + inset, y: top + inset },
       tc: { x: centerX, y: top + inset },
@@ -793,6 +791,14 @@ Changelog
       yLine.strokeWidth = strokeWeight;
       yLine.filled = false;
       regGroup.rotate(rotation, true, true, true, true, Transformation.TOPLEFT);
+      var textbox = regGroup.pathItems.rectangle(regGroup.top, regGroup.left, size, size);
+      var textFrame = regGroup.textFrames.areaText(textbox);
+      textFrame.contents = "Add custom info here."
+      textFrame.textRange.characterAttributes.size = 7;
+      textFrame.textRange.fillColor = color;
+      textFrame.textRange.justification = Justification.CENTER;
+
+
     } else {
       //make a center mark instead
       var yLine = regGroup.pathItems.add();

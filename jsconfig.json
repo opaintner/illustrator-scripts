@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "target": "es3",
     "checkJs": false
   },
   "include": [
