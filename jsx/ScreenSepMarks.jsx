@@ -513,7 +513,7 @@ Changelog
   var defaults = {};
   defaults["[Default]"] = {
     tl: true,
-    tc: false,
+    tc: true,
     tr: true,
     cl: false,
     cc: false,
@@ -521,18 +521,18 @@ Changelog
     bl: true,
     bc: false,
     br: true,
-    size: "0.5 in",
+    size: "0.8 in",
     stroke: "1.0 pt",
-    inset: "0.1 in",
+    inset: "0.2 in",
     color: "[Registration]",
-    invertinset: false,
+    invertinset: true,
     blanktextbox: true,
     spots: false,
     file: false,
     timestamp: false,
     position: "Top",
     alignment: "Left",
-    referenceObject: 0,
+    referenceObject: 1,
   };
 
   // grab document and swatch info
