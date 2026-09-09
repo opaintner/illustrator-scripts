@@ -794,7 +794,7 @@ Changelog
       var textbox = regGroup.pathItems.rectangle(regGroup.top, regGroup.left, size, size);
       var textFrame = regGroup.textFrames.areaText(textbox);
       textFrame.contents = "Add custom info here."
-      textFrame.textRange.characterAttributes.size = 7;
+      textFrame.textRange.characterAttributes.size = 12;
       textFrame.textRange.fillColor = color;
       textFrame.textRange.justification = Justification.CENTER;
 
