@@ -494,10 +494,16 @@ Changelog
    * @property {Boolean} bl - Bottom-left registration mark enabled.
    * @property {Boolean} bc - Bottom-center registration mark enabled.
    * @property {Boolean} br - Bottom-right registration mark enabled.
+  * @property {String} tlText - Text for the top-left registration mark.
+  * @property {String} trText - Text for the top-right registration mark.
+  * @property {String} blText - Text for the bottom-left registration mark.
+  * @property {String} brText - Text for the bottom-right registration mark.
    * @property {String} size - Mark size, stored as a unit string.
    * @property {String} stroke - Stroke width, stored as a unit string.
    * @property {String} inset - Inset distance from artboard edge, stored as a unit string.
    * @property {Boolean} invertinset - Whether inset is inverted.
+  * @property {Boolean} saveSpaceHorizontal - Move left and right marks inward by one mark size.
+  * @property {Boolean} saveSpaceVertical - Move top and bottom marks inward by one mark size.
    * @property {String} color - Spot swatch name used for registration marks.
    * @property {Boolean} blanktextbox - Whether to add a blank custom text box.
    * @property {Boolean} spots - Whether to add spot color names to the artwork.
@@ -521,11 +527,17 @@ Changelog
     bl: true,
     bc: false,
     br: true,
+    tlText: "Add custom info here.",
+    trText: "Add custom info here.",
+    blText: "Add custom info here.",
+    brText: "Add custom info here.",
     size: "0.8 in",
     stroke: "1.0 pt",
     inset: "0.2 in",
     color: "[Registration]",
     invertinset: true,
+    saveSpaceHorizontal: false,
+    saveSpaceVertical: false,
     blanktextbox: true,
     spots: false,
     file: false,
@@ -662,16 +674,18 @@ Changelog
     var left = inset + size / 2;
     var right = doc.width - inset - size / 2;
     var centerX = doc.width / 2;
+    var horizontalOffset = settings.saveSpaceHorizontal ? size : 0;
+    var verticalOffset = settings.saveSpaceVertical ? size : 0;
     var centerY = doc.height / 2;
     var marks = {
-      tl: { x: left - size / 2, y: top - size / 2 },
-      tc: { x: centerX, y: top - size / 2 },
-      tr: { x: right + size / 2, y: top - size / 2 },
-      cl: { x: left - size / 2, y: centerY },
-      cr: { x: right + size / 2, y: centerY },
-      bl: { x: left - size / 2, y: bottom + size / 2 },
-      bc: { x: centerX, y: bottom + size / 2 },
-      br: { x: right + size / 2, y: bottom + size / 2 },
+      tl: { x: left - size / 2 + horizontalOffset, y: top - size / 2 + verticalOffset },
+      tc: { x: centerX, y: top - size / 2 + verticalOffset },
+      tr: { x: right + size / 2 - horizontalOffset, y: top - size / 2 + verticalOffset },
+      cl: { x: left - size / 2 + horizontalOffset, y: centerY },
+      cr: { x: right + size / 2 - horizontalOffset, y: centerY },
+      bl: { x: left - size / 2 + horizontalOffset, y: bottom + size / 2 - verticalOffset },
+      bc: { x: centerX, y: bottom + size / 2 - verticalOffset },
+      br: { x: right + size / 2 - horizontalOffset, y: bottom + size / 2 - verticalOffset },
     };
   } else if (settings.referenceObject == 1) {
     // calculate selection visible bounds
@@ -688,15 +702,17 @@ Changelog
     var right = selBounds[2];
     var centerX = (left + right) / 2;
     var centerY = (top + bottom) / 2;
+    var horizontalOffset = settings.saveSpaceHorizontal ? size : 0;
+    var verticalOffset = settings.saveSpaceVertical ? size : 0;
     var marks = {
-      tl: { x: left + inset, y: top + inset },
-      tc: { x: centerX, y: top + inset },
-      tr: { x: right - inset, y: top + inset },
-      cl: { x: left+inset, y: centerY },
-      cr: { x: right-inset, y: centerY },
-      bl: { x: left + inset, y: bottom - inset },   
-      bc: { x: centerX, y: bottom - inset },
-      br: { x: right - inset, y: bottom - inset },
+      tl: { x: left + inset + horizontalOffset, y: top + inset + verticalOffset },
+      tc: { x: centerX, y: top + inset + verticalOffset },
+      tr: { x: right - inset - horizontalOffset, y: top + inset + verticalOffset },
+      cl: { x: left + inset + horizontalOffset, y: centerY },
+      cr: { x: right - inset - horizontalOffset, y: centerY },
+      bl: { x: left + inset + horizontalOffset, y: bottom - inset - verticalOffset },
+      bc: { x: centerX, y: bottom - inset - verticalOffset },
+      br: { x: right - inset - horizontalOffset, y: bottom - inset - verticalOffset },
     };
   }
 
@@ -750,7 +766,8 @@ Changelog
         rotation,
         stroke,
         center,
-        name
+        name,
+        settings[name + "Text"]
       );
     }
 
@@ -768,9 +785,10 @@ Changelog
    * @param {SpotColor} color - The spot color to use for both lines.
    * @param {Number} rotation - The rotation angle for the mark, in degrees.
    * @param {Number} strokeWeight - The stroke width for the mark lines, in points.
-   * @param {Boolean} center - Whether the mark is a center mark (single line) or a corner mark (L-shaped). If true, the mark is centered at (x, y); if false, the mark's bottom-left corner is at (x, y).
+  * @param {Boolean} center - Whether the mark is a center mark (single line) or a corner mark (L-shaped). If true, the mark is centered at (x, y); if false, the mark's bottom-left corner is at (x, y).
+  * @param {String} text - Text to inject into the corner mark's area-text frame.
    */
-  function makeReg(layer, x, y, size, color, rotation, strokeWeight, center, name) {
+  function makeReg(layer, x, y, size, color, rotation, strokeWeight, center, name, text) {
     // make a group to hold reg mark parts
       var regGroup = layer.groupItems.add();
       if (!center) {
@@ -796,7 +814,7 @@ Changelog
       regGroup.rotate(rotation, true, true, true, true, Transformation.TOPLEFT);
       var textbox = regGroup.pathItems.rectangle(regGroup.top, regGroup.left, size, size);
       var textFrame = regGroup.textFrames.areaText(textbox);
-      textFrame.contents = "Add custom info here."
+      textFrame.contents = text || "";
       textFrame.textRange.characterAttributes.size = 12;
       textFrame.textRange.fillColor = color;
       textFrame.textRange.justification = Justification.CENTER;
@@ -1072,6 +1090,435 @@ Changelog
   ////////////////////////
 
   /**
+   * State consumed by the registration-mark preview renderer.
+   *
+  * All measurement values are stored internally as points. The dialog
+  * converts its unit-aware input values before calling `update()`, which
+  * keeps the drawing code independent of the document ruler units. The
+  * preview uses the state to render a schematic only; it does not create or
+  * modify Illustrator page items.
+   *
+   * @typedef {Object} RegistrationPreviewData
+   * @property {Number} size - Registration-mark size in points.
+   * @property {Number} stroke - Registration-mark stroke width in points.
+   * @property {Number} inset - Distance used to illustrate the mark inset in
+   * points.
+   * @property {String} insetDirection - Whether the illustrated inset is
+   * "Inset" or "Outset".
+   * @property {String} color - Spot color name displayed in the summary.
+   * @property {String} reference - Reference-object label displayed in the
+   * summary, normally "Artboard" or "Selection".
+  * @property {Number} referenceIndex - Selected reference-object index. It is
+  * retained in preview state for completeness but is not currently used to
+  * alter the schematic.
+   * @property {Boolean} saveSpaceHorizontal - Whether horizontal space-saving
+   * placement is illustrated.
+   * @property {Boolean} saveSpaceVertical - Whether vertical space-saving
+   * placement is illustrated.
+   * @property {String} unit - Unit suffix used for displayed measurements.
+   */
+
+  /**
+   * API returned by {@link createRegistrationPreview}.
+   *
+   * @typedef {Object} RegistrationPreview
+   * @property {Panel} control - The ScriptUI panel that owns the preview.
+   * @property {Function} update - Merge new preview state and request a redraw.
+   */
+
+  /**
+   * Create the schematic registration-mark preview used by the settings
+   * dialog.
+   *
+   * The preview owns both its ScriptUI panel and its drawing state. Callers
+   * should update it through the returned `update()` method rather than
+   * reaching into ScriptUI graphics directly. Calling `update()` merges only
+   * the supplied properties, refreshes the panel, and relayouts its parent
+   * when possible.
+   *
+  * The renderer draws a paper boundary, a registration mark, dimension
+  * annotations for size/inset/stroke, and a compact text summary. The mark
+  * size is schematic rather than proportional to the entered size; inset and
+  * stroke display values are bounded for layout purposes. The result is not a
+  * scale-accurate artboard preview.
+   *
+   * @param {Group|Panel} parent - ScriptUI container in which the preview
+   * panel is created.
+   * @returns {RegistrationPreview} Preview panel and state-update API.
+   */
+  function createRegistrationPreview(parent) {
+    var control = parent.add("panel", undefined);
+    control.preferredSize = [300, 150];
+    control.alignment = ["fill", "top"];
+
+    var data = {
+      size: 0,
+      stroke: 0,
+      inset: 0,
+      insetDirection: "Inset",
+      color: "[Registration]",
+      reference: "Artboard",
+      referenceIndex: 0,
+      saveSpaceHorizontal: false,
+      saveSpaceVertical: false,
+      unit: "pt",
+    };
+
+    /**
+     * Draw a single stroked line in the preview graphics context.
+     *
+     * A new path is created for each line because ScriptUI graphics paths are
+     * mutable drawing objects. This helper centralizes the path construction
+     * used by marks, dimension extensions, and arrowheads.
+     *
+     * @param {ScriptUIGraphics} graphics - Graphics context supplied by the
+     * preview panel's `onDraw` handler.
+     * @param {ScriptUIPen} pen - Pen used to stroke the line.
+     * @param {Number} x1 - Starting x-coordinate in preview pixels.
+     * @param {Number} y1 - Starting y-coordinate in preview pixels.
+     * @param {Number} x2 - Ending x-coordinate in preview pixels.
+     * @param {Number} y2 - Ending y-coordinate in preview pixels.
+     * @returns {void}
+     */
+    function drawLine(graphics, pen, x1, y1, x2, y2) {
+      var path = graphics.newPath();
+      graphics.moveTo(x1, y1);
+      graphics.lineTo(x2, y2);
+      graphics.strokePath(pen, path);
+    }
+
+    /**
+     * Draw a filled and stroked rectangle representing the preview paper.
+     *
+     * @param {ScriptUIGraphics} graphics - Preview graphics context.
+     * @param {ScriptUIPen} pen - Pen used for the rectangle outline.
+     * @param {ScriptUIBrush} brush - Brush used for the rectangle fill.
+     * @param {Number} left - Left x-coordinate in preview pixels.
+     * @param {Number} top - Top y-coordinate in preview pixels.
+     * @param {Number} width - Rectangle width in preview pixels.
+     * @param {Number} height - Rectangle height in preview pixels.
+     * @returns {void}
+     */
+    function drawRectangle(graphics, pen, brush, left, top, width, height) {
+      var path = graphics.newPath();
+      graphics.rectPath(left, top, width, height);
+      graphics.fillPath(brush, path);
+      graphics.strokePath(pen, path);
+    }
+
+    /**
+     * Draw an unfilled rectangular guide around the illustrated inset area.
+     *
+     * @param {ScriptUIGraphics} graphics - Preview graphics context.
+     * @param {ScriptUIPen} pen - Pen used for the guide outline.
+     * @param {Number} left - Left x-coordinate in preview pixels.
+     * @param {Number} top - Top y-coordinate in preview pixels.
+     * @param {Number} width - Outline width in preview pixels.
+     * @param {Number} height - Outline height in preview pixels.
+     * @returns {void}
+     */
+    function drawOutline(graphics, pen, left, top, width, height) {
+      var path = graphics.newPath();
+      graphics.rectPath(left, top, width, height);
+      graphics.strokePath(pen, path);
+    }
+
+    /**
+     * Draw a line with an arrowhead at its ending point.
+     *
+     * The arrowhead is formed from two short lines rotated 36 degrees from
+     * the reverse direction of the main line. The helper is called twice by
+     * `drawDimension()` to create a dimension line with arrows at both ends.
+     *
+     * @param {ScriptUIGraphics} graphics - Preview graphics context.
+     * @param {ScriptUIPen} pen - Pen used for the line and arrowhead.
+     * @param {Number} x1 - Starting x-coordinate in preview pixels.
+     * @param {Number} y1 - Starting y-coordinate in preview pixels.
+     * @param {Number} x2 - Ending x-coordinate in preview pixels.
+     * @param {Number} y2 - Ending y-coordinate in preview pixels.
+     * @param {Number} headSize - Length of each arrowhead side in pixels.
+     * @returns {void}
+     */
+    function drawArrow(graphics, pen, x1, y1, x2, y2, headSize) {
+      var angle = Math.atan2(y2 - y1, x2 - x1);
+      var leftAngle = angle + Math.PI * 0.8;
+      var rightAngle = angle - Math.PI * 0.8;
+      drawLine(graphics, pen, x1, y1, x2, y2);
+      drawLine(
+        graphics,
+        pen,
+        x2,
+        y2,
+        x2 + Math.cos(leftAngle) * headSize,
+        y2 + Math.sin(leftAngle) * headSize,
+      );
+      drawLine(
+        graphics,
+        pen,
+        x2,
+        y2,
+        x2 + Math.cos(rightAngle) * headSize,
+        y2 + Math.sin(rightAngle) * headSize,
+      );
+    }
+
+    /**
+     * Draw a two-ended dimension annotation and its label.
+     *
+     * @param {ScriptUIGraphics} graphics - Preview graphics context.
+     * @param {ScriptUIPen} pen - Pen used for arrows and label text.
+     * @param {Number} x1 - First dimension endpoint x-coordinate.
+     * @param {Number} y1 - First dimension endpoint y-coordinate.
+     * @param {Number} x2 - Second dimension endpoint x-coordinate.
+     * @param {Number} y2 - Second dimension endpoint y-coordinate.
+     * @param {String} label - Measurement label to render.
+     * @param {Number} labelX - Label x-coordinate in preview pixels.
+     * @param {Number} labelY - Label y-coordinate in preview pixels.
+     * @returns {void}
+     */
+    function drawDimension(graphics, pen, x1, y1, x2, y2, label, labelX, labelY) {
+      drawArrow(graphics, pen, x1, y1, x2, y2, 4);
+      drawArrow(graphics, pen, x2, y2, x1, y1, 4);
+      graphics.drawString(label, pen, labelX, labelY);
+    }
+
+    /**
+     * Draw the L-shaped registration mark used in the schematic.
+     *
+     * The mark extends left and upward from its anchor. Its orientation is
+     * intentionally fixed in the preview because the dialog preview focuses
+     * on dimensions and placement rather than showing every corner rotation.
+     *
+     * @param {ScriptUIGraphics} graphics - Preview graphics context.
+     * @param {ScriptUIPen} pen - Pen used to stroke the mark.
+     * @param {Number} x - Mark anchor x-coordinate in preview pixels.
+     * @param {Number} y - Mark anchor y-coordinate in preview pixels.
+     * @param {Number} size - Length of each mark arm in preview pixels.
+     * @returns {void}
+     */
+    function drawRotatedMark(graphics, pen, x, y, size) {
+      drawLine(graphics, pen, x, y, x - size, y);
+      drawLine(graphics, pen, x, y, x, y - size);
+    }
+
+    /**
+     * Paint the complete preview whenever ScriptUI requests a redraw.
+     *
+    * The drawing is rebuilt from the current `data` object on every call, so
+    * no stale graphics paths need to be retained between updates. Coordinates
+    * are derived from the panel dimensions. The inset distance and rendered
+    * stroke width are bounded for display, while the entered size is shown in
+    * labels and does not control the schematic mark's fixed pixel size.
+     *
+     * @this {Panel}
+     * @returns {void}
+     */
+    control.onDraw = function () {
+      var graphics = this.graphics;
+      var width = this.size.width;
+      var height = this.size.height;
+      var paperPen = graphics.newPen(
+        graphics.PenType.SOLID_COLOR,
+        [0.35, 0.35, 0.35, 1],
+        1,
+      );
+      var guidePen = graphics.newPen(
+        graphics.PenType.SOLID_COLOR,
+        [0.55, 0.55, 0.55, 1],
+        1,
+      );
+      var markPen = graphics.newPen(
+        graphics.PenType.SOLID_COLOR,
+        [0.05, 0.05, 0.05, 1],
+        Math.max(1, Math.min(100, data.stroke * 0.75)),
+      );
+      var labelBrush = graphics.newBrush(
+        graphics.BrushType.SOLID_COLOR,
+        [0.29, 0.61, 0.83, 1],
+      );
+      var paperBrush = graphics.newBrush(
+        graphics.BrushType.SOLID_COLOR,
+        [0.94, 0.94, 0.94, 1],
+      );
+      var markSize = 64;
+      var insetDistance = Math.max(0, Math.min(72, data.inset * 2.5));
+      var direction = data.insetDirection == "Inset" ? 1 : -1;
+      var saveSpaceX = data.saveSpaceHorizontal ? markSize : 0;
+      var saveSpaceY = data.saveSpaceVertical ? markSize : 0;
+      var markX = width / 2;
+      var markY = height / 2;
+      var cornerX = markX - direction * insetDistance - saveSpaceX;
+      var cornerY = markY - direction * insetDistance - saveSpaceY;
+      var left = cornerX;
+      var top = cornerY;
+      var paperSize = width * 2;
+      var paperRight = left + paperSize;
+      var paperBottom = top + paperSize;
+      var dimensionPen = graphics.newPen(
+        graphics.PenType.SOLID_COLOR,
+        [0.29, 0.61, 0.83, 1],
+        1,
+      );
+
+      drawRectangle(
+        graphics,
+        paperPen,
+        paperBrush,
+        left,
+        top,
+        paperRight - left,
+        paperBottom - top,
+      );
+      drawLine(graphics, paperPen, left, top, paperRight, top);
+      drawLine(graphics, paperPen, left, top, left, paperBottom);
+      drawRotatedMark(graphics, markPen, markX, markY, markSize);
+
+      var sizeDimensionY = markY - 22;
+      drawLine(graphics, dimensionPen, markX, markY, markX, sizeDimensionY);
+      drawLine(
+        graphics,
+        dimensionPen,
+        markX - markSize,
+        markY,
+        markX - markSize,
+        sizeDimensionY,
+      );
+      drawDimension(
+        graphics,
+        dimensionPen,
+        markX,
+        sizeDimensionY,
+        markX - markSize,
+        sizeDimensionY,
+        "Size " + formatMeasurement(data.size),
+        4,
+        sizeDimensionY - 24,
+      );
+      drawLine(
+        graphics,
+        dimensionPen,
+        68,
+        sizeDimensionY - 8,
+        markX - markSize / 2,
+        sizeDimensionY,
+      );
+
+      var diagonalMidX = (cornerX + markX) / 2;
+      var diagonalMidY = (cornerY + markY) / 2;
+      var insetLabelX = diagonalMidX + 12;
+      var insetLabelY = diagonalMidY + 14;
+      if (data.insetDirection == "Outset") {
+        drawOutline(
+          graphics,
+          dimensionPen,
+          left - insetDistance,
+          top - insetDistance,
+          paperSize + insetDistance * 2,
+          paperSize + insetDistance * 2,
+        );
+        graphics.drawString(
+          "Outset " + formatMeasurement(data.inset),
+          dimensionPen,
+          left - insetDistance - 40 + insetDistance * 0.75,
+          top - insetDistance - 16,
+        );
+      } else {
+        drawOutline(
+          graphics,
+          dimensionPen,
+          left + insetDistance,
+          top + insetDistance,
+          paperSize - insetDistance * 2,
+          paperSize - insetDistance * 2,
+        );
+        graphics.drawString(
+          "Inset " + formatMeasurement(data.inset),
+          dimensionPen,
+          left + insetDistance - 40 + insetDistance * 0.75,
+          top + insetDistance - 16,
+        );
+      }
+
+      var strokeAnchorX = markX;
+      var strokeAnchorY = markY - markSize;
+      var strokeX = strokeAnchorX + 10;
+      var strokeY = strokeAnchorY - 4;
+      drawLine(graphics, dimensionPen, strokeAnchorX, strokeAnchorY, strokeX, strokeY);
+      graphics.drawString(
+        "Stroke " + formatMeasurement(data.stroke, "pt"),
+        dimensionPen,
+        strokeX + 3,
+        strokeY + 3,
+      );
+
+      graphics.drawString("Size: " + formatMeasurement(data.size), labelBrush, 12, height - 58);
+      graphics.drawString(
+        "Inset: " + formatMeasurement(data.inset) + "  " + data.insetDirection,
+        labelBrush,
+        112,
+        height - 58,
+      );
+      graphics.drawString("Stroke: " + formatMeasurement(data.stroke), labelBrush, 12, height - 43);
+      graphics.drawString("Ref: " + data.reference, labelBrush, 112, height - 43);
+      graphics.drawString("Color: " + data.color, labelBrush, 12, height - 28);
+      var saveSpaceLabel = "None";
+      if (data.saveSpaceHorizontal && data.saveSpaceVertical) {
+        saveSpaceLabel = "Horizontal + Vertical";
+      } else if (data.saveSpaceHorizontal) {
+        saveSpaceLabel = "Horizontal";
+      } else if (data.saveSpaceVertical) {
+        saveSpaceLabel = "Vertical";
+      }
+      graphics.drawString("Space: " + saveSpaceLabel, labelBrush, 112, height - 28);
+    };
+
+    /**
+     * Format a point measurement for display in the preview.
+     *
+     * Illustrator's `UnitValue` performs the conversion so the preview can
+     * display the document's selected unit while retaining point-based drawing
+     * calculations. Invalid values are not handled here; callers provide the
+     * validated numeric values gathered by `updatePreview()`.
+     *
+     * @param {Number} points - Measurement value expressed in points.
+     * @param {String} [unit] - Target unit suffix. Defaults to the current
+     * preview state's `unit` value.
+     * @returns {String} Value rounded to two decimals followed by its unit.
+     */
+    function formatMeasurement(points, unit) {
+      unit = unit || data.unit;
+      var value = UnitValue(points, "pt");
+      return value.as(unit).toFixed(2) + " " + unit;
+    }
+
+    return {
+      control: control,
+      /**
+       * Merge new state into the preview and request a visual refresh.
+       *
+      * The update is intentionally shallow: callers provide only the fields
+      * that changed, while unspecified fields retain their previous values.
+      * Toggling visibility prompts ScriptUI to repaint the control, and the
+      * parent layout is refreshed when the host exposes a layout manager. The
+      * method does not validate or convert supplied values; callers are
+      * responsible for providing preview-state values in the documented form.
+       *
+       * @param {Partial<RegistrationPreviewData>} nextData - Preview state
+       * properties to replace.
+       * @returns {void}
+       */
+      update: function (nextData) {
+        for (var prop in nextData) data[prop] = nextData[prop];
+        control.visible = false;
+        control.visible = true;
+        if (control.parent && control.parent.layout) {
+          control.parent.layout.layout(true);
+        }
+      },
+    };
+  }
+
+  /**
    * Show the script settings dialog and return the selected options.
    *
    * @returns {Object|Boolean} settings object if OK was clicked, or false if canceled.
@@ -1110,47 +1557,158 @@ Changelog
       referenceObject.items[1].enabled = false;
     }
 
-    // Panel - Registration
-    var pRegistration = win.add("panel", undefined, "Registration Marks");
-    pRegistration.orientation = "row";
-    pRegistration.alignChildren = ["center", "top"];
-    pRegistration.margins = 18;
-
     // Panel - Placement
-    var pPlacement = pRegistration.add("panel", undefined, "Placement");
+    var pPlacement = win.add("panel", undefined, "Placement");
     pPlacement.orientation = "column";
-    pPlacement.alignChildren = ["center", "center"];
+    pPlacement.alignChildren = ["fill", "center"];
     pPlacement.margins = 18;
-    pPlacement.alignment = ["left", "fill"];
+    pPlacement.alignment = ["fill", "top"];
 
-    // Group - Top
-    var gTop = pPlacement.add("group", undefined);
+    var placementContent = pPlacement.add("group", undefined);
+    placementContent.orientation = "row";
+    placementContent.alignChildren = ["fill", "center"];
+    placementContent.alignment = ["fill", "center"];
+
+    function addMarkTextField(group, justify) {
+      var textControl = group.add(
+        'edittext {justify: "' + justify + '"}',
+        undefined,
+        "",
+      );
+      textControl.preferredSize.width = 180;
+      textControl.alignment = ["fill", "center"];
+      return textControl;
+    }
+
+    function addTextColumnRow(column, arrow, textFirst) {
+      var row = column.add("group", undefined);
+      row.orientation = "row";
+      row.spacing = textFirst ? 8 : 0;
+      row.alignChildren = ["fill", "center"];
+      row.alignment = ["fill", "center"];
+      var textControl;
+      if (textFirst) {
+        textControl = addMarkTextField(row, "right");
+        row.add("statictext", undefined, arrow);
+      } else {
+        row.add("statictext", undefined, arrow);
+        textControl = addMarkTextField(row, "left");
+      }
+      return textControl;
+    }
+
+    var leftTextColumn = placementContent.add("group", undefined);
+    leftTextColumn.orientation = "column";
+    leftTextColumn.alignChildren = ["fill", "center"];
+    leftTextColumn.alignment = ["fill", "center"];
+    leftTextColumn.preferredSize.width = 200;
+    var tlText = addTextColumnRow(leftTextColumn, "\u2192", true);
+    leftTextColumn.add("group", undefined).preferredSize.height = 20;
+    var blText = addTextColumnRow(leftTextColumn, "\u2192", true);
+
+    // Checkbox grid
+    var checkboxGrid = placementContent.add("group", undefined);
+    checkboxGrid.orientation = "column";
+    checkboxGrid.alignChildren = ["center", "center"];
+    checkboxGrid.alignment = ["center", "center"];
+
+    var gTop = checkboxGrid.add("group", undefined);
     gTop.orientation = "row";
     var tl = gTop.add("checkbox", undefined);
     var tc = gTop.add("checkbox", undefined);
     var tr = gTop.add("checkbox", undefined);
 
-    // Group - Center
-    var gCenter = pPlacement.add("group", undefined);
+    var gCenter = checkboxGrid.add("group", undefined);
     gCenter.orientation = "row";
     var cl = gCenter.add("checkbox", undefined);
     var cc = gCenter.add("checkbox", undefined);
     cc.enabled = false;
     var cr = gCenter.add("checkbox", undefined);
 
-    // Group - Bottom
-    var gBottom = pPlacement.add("group", undefined);
+    var gBottom = checkboxGrid.add("group", undefined);
     gBottom.orientation = "row";
     var bl = gBottom.add("checkbox", undefined);
     var bc = gBottom.add("checkbox", undefined);
     var br = gBottom.add("checkbox", undefined);
 
+    var rightTextColumn = placementContent.add("group", undefined);
+    rightTextColumn.orientation = "column";
+    rightTextColumn.alignChildren = ["fill", "center"];
+    rightTextColumn.alignment = ["fill", "center"];
+    rightTextColumn.preferredSize.width = 200;
+    var trText = addTextColumnRow(rightTextColumn, "\u2190", false);
+    rightTextColumn.add("group", undefined).preferredSize.height = 20;
+    var brText = addTextColumnRow(rightTextColumn, "\u2190", false);
+
+    // Group - Specs and Preview
+    var gSpecsPreview = win.add("group", undefined);
+    gSpecsPreview.orientation = "row";
+    gSpecsPreview.alignChildren = ["fill", "top"];
+    gSpecsPreview.alignment = ["fill", "top"];
+
     // Panel - Specs
-    var pSpecs = pRegistration.add("panel", undefined, "Specs");
+    var pSpecs = gSpecsPreview.add("panel", undefined, "Specs");
     pSpecs.orientation = "column";
     pSpecs.alignChildren = ["left", "top"];
     pSpecs.margins = 18;
-    pSpecs.alignment = ["left", "fill"];
+    pSpecs.spacing = 6;
+    pSpecs.alignment = ["left", "top"];
+
+    // Panel - Preview
+    var pPreview = gSpecsPreview.add("panel", undefined, "Preview");
+    pPreview.orientation = "column";
+    pPreview.alignChildren = ["fill", "top"];
+    pPreview.margins = 10;
+    pPreview.alignment = ["fill", "top"];
+
+    var preview = createRegistrationPreview(pPreview);
+
+    function matchSpecsHeightToPreview() {
+      var previewHeight = pPreview.size.height;
+      pSpecs.minimumSize.height = previewHeight;
+      pSpecs.preferredSize.height = previewHeight;
+      pSpecs.maximumSize.height = previewHeight;
+      win.layout.layout(true);
+    }
+
+    function getPreviewValue(text, fallback, defaultUnit) {
+      var value;
+      try {
+        value = UnitValue(text);
+        if (value.type == "?") value = UnitValue(text, defaultUnit);
+        value = value.as("pt");
+        if (isNaN(value) || value < 0) value = fallback;
+      } catch (e) {
+        value = fallback;
+      }
+      return value;
+    }
+
+    function updatePreview() {
+      var rulerUnits = doc.rulerUnits.toString().split(".")[1].toLowerCase();
+      var referenceText =
+        referenceObject.selection && referenceObject.selection.text
+          ? referenceObject.selection.text
+          : "Artboard";
+      preview.update({
+        size: getPreviewValue(size.text, 0, "in"),
+        stroke: getPreviewValue(stroke.text, 0, "pt"),
+        inset: getPreviewValue(inset.text, 0, "in"),
+        insetDirection: invertinset.value ? "Outset" : "Inset",
+        color:
+          color.selection && color.selection.text
+            ? color.selection.text
+            : "[Registration]",
+        reference: referenceText,
+        referenceIndex:
+          referenceObject.selection && referenceObject.selection.index == 1
+            ? 1
+            : 0,
+        saveSpaceHorizontal: saveSpaceHorizontal.value,
+        saveSpaceVertical: saveSpaceVertical.value,
+        unit: rulerUnits,
+      });
+    }
 
     // Group - Size
     var gSize = pSpecs.add("group", undefined, { name: "gSize" });
@@ -1207,6 +1765,30 @@ Changelog
     );
     inset.text = "";
     inset.preferredSize.width = 100;
+
+    // Group - Save Space
+    var gSaveSpace = pSpecs.add("group", undefined);
+    gSaveSpace.orientation = "row";
+    gSaveSpace.alignChildren = ["left", "center"];
+    gSaveSpace.alignment = ["fill", "center"];
+    var saveSpaceHorizontal = gSaveSpace.add(
+      "checkbox",
+      undefined,
+      "Save Space Horizontal",
+    );
+    var saveSpaceVertical = gSaveSpace.add(
+      "checkbox",
+      undefined,
+      "Save Space Vertical",
+    );
+    saveSpaceHorizontal.enabled = false;
+    saveSpaceVertical.enabled = false;
+
+    function updateSaveSpaceEnabled() {
+      var enabled = !!invertinset.value;
+      saveSpaceHorizontal.enabled = enabled;
+      saveSpaceVertical.enabled = enabled;
+    }
 
     // Group - Color
     var gColor = pSpecs.add("group", undefined);
@@ -1374,11 +1956,22 @@ Changelog
       var insetUnitValue = parseNumberInput(s.inset);
       insetUnitValue.value = insetUnitValue.value.toFixed(4);
       inset.text = insetUnitValue;
+      invertinset.value = s.invertinset;
+      updateSaveSpaceEnabled();
+      saveSpaceHorizontal.value = !!s.saveSpaceHorizontal;
+      saveSpaceVertical.value = !!s.saveSpaceVertical;
+      if (saveSpaceHorizontal.value && saveSpaceVertical.value) {
+        saveSpaceVertical.value = false;
+      }
 
       var strokeUnitValue = parseNumberInput(s.stroke);
       stroke.text = strokeUnitValue;
 
       // set output information
+      tlText.text = typeof s.tlText == "string" ? s.tlText : defaults["[Default]"].tlText;
+      trText.text = typeof s.trText == "string" ? s.trText : defaults["[Default]"].trText;
+      blText.text = typeof s.blText == "string" ? s.blText : defaults["[Default]"].blText;
+      brText.text = typeof s.brText == "string" ? s.brText : defaults["[Default]"].brText;
       spots.value = s.spots;
       file.value = s.file;
       timestamp.value = s.timestamp;
@@ -1398,6 +1991,10 @@ Changelog
 
       // set the preset dropdown
       preset.selection = preset.find(k);
+      referenceObject.selection =
+        s.referenceObject == 1 && referenceObject.items[1].enabled ? 1 : 0;
+
+      updatePreview();
 
       // loading = false;
     }
@@ -1450,10 +2047,16 @@ Changelog
         bl: !!bl.value,
         bc: !!bc.value,
         br: !!br.value,
+        tlText: tlText.text,
+        trText: trText.text,
+        blText: blText.text,
+        brText: brText.text,
         size: UnitValue(size.text).toString(),
         stroke: UnitValue(stroke.text).toString(),
         inset: UnitValue(inset.text).toString(),
         invertinset: !!invertinset.value,
+        saveSpaceHorizontal: !!saveSpaceHorizontal.value,
+        saveSpaceVertical: !!saveSpaceVertical.value,
         color:
           color.selection && color.selection.text
             ? color.selection.text
@@ -1484,6 +2087,7 @@ Changelog
     // load initial presets
     win.onShow = function () {
       loadPreset(s);
+      matchSpecsHeightToPreview();
     };
 
     size.onChange = function () {
@@ -1500,6 +2104,7 @@ Changelog
 
       preset.selection = null;
       btDelete.enabled = false;
+      updatePreview();
     };
 
     stroke.onChange = function () {
@@ -1516,6 +2121,7 @@ Changelog
 
       preset.selection = null;
       btDelete.enabled = false;
+      updatePreview();
     };
 
     inset.onChange = function () {
@@ -1532,11 +2138,26 @@ Changelog
 
       preset.selection = null;
       btDelete.enabled = false;
+      updatePreview();
     };
 
     color.onChange = function () {
       preset.selection = null;
       btDelete.enabled = false;
+      updatePreview();
+    };
+
+    invertinset.onClick = function () {
+      updateSaveSpaceEnabled();
+      preset.selection = null;
+      btDelete.enabled = false;
+      updatePreview();
+    };
+
+    referenceObject.onChange = function () {
+      preset.selection = null;
+      btDelete.enabled = false;
+      updatePreview();
     };
 
     position.onChange = function () {
@@ -1706,13 +2327,32 @@ Changelog
       spots,
       file,
       timestamp,
+      tlText,
+      trText,
+      blText,
+      brText,
     ];
     for (var z = 0; z < onClickResets.length; z++) {
       onClickResets[z].onClick = function () {
         preset.selection = null;
         btDelete.enabled = false;
+        updatePreview();
       };
     }
+
+    saveSpaceHorizontal.onClick = function () {
+      if (saveSpaceHorizontal.value) saveSpaceVertical.value = false;
+      preset.selection = null;
+      btDelete.enabled = false;
+      updatePreview();
+    };
+
+    saveSpaceVertical.onClick = function () {
+      if (saveSpaceVertical.value) saveSpaceHorizontal.value = false;
+      preset.selection = null;
+      btDelete.enabled = false;
+      updatePreview();
+    };
 
     // if "ok" button clicked then return inputs
     if (win.show() == 1) {
