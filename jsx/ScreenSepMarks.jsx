@@ -582,9 +582,9 @@ Changelog
     return;
   }
 
-  // place layer in correct position and lock it
+  // place layer in correct position and don't lock it
   layer.zOrderPosition = -1;
-  layer.locked = true;
+  layer.locked = false;
 
   //////////////////////////////
   // SCRIPT DRAWING FUNCTIONS //
@@ -753,6 +753,9 @@ Changelog
         name
       );
     }
+
+    // Center all registration mark text frames after they have been created.
+    verticalCenterTextFrame(layer);
   }
 
   /**
@@ -907,6 +910,160 @@ Changelog
         settings.position == "Top" ? 0 : -doc.height + infoTextFrame.height;
       infoTextFrame.left =
         settings.alignment == "Left" ? doc.width - infoTextFrame.width : 0;
+    }
+  }
+
+  /**
+   * Vertically center every area-text frame contained by a layer.
+   *
+   * Registration mark text frames are nested inside group items, so this
+   * function recursively walks the layer and its groups before selecting the
+   * complete set of area-text frames. It then runs Illustrator's native
+   * frame-alignment action once for the whole selection. The action is loaded
+   * from a temporary file because ExtendScript does not expose this alignment
+   * operation directly through the TextFrame object model.
+   *
+   * @param {Layer} layer - The layer to search for area-text frames.
+   * @returns {void} Does nothing when the layer is invalid or contains no
+   * area-text frames.
+   */
+  function verticalCenterTextFrame(layer) {
+    // Safety check to ensure a valid layer was passed
+    if (!layer || layer.typename !== "Layer") return;
+
+    var validTextFrames = [];
+
+    // Include area text frames nested inside the registration mark groups.
+    collectAreaTextFrames(layer);
+
+    /**
+     * Recursively collect area-text frames from a layer or group item.
+     *
+     * @param {Layer|GroupItem} container - Object whose direct text frames and
+     * nested groups should be searched.
+     * @returns {void} Adds unique area-text frames to `validTextFrames`.
+     */
+    function collectAreaTextFrames(container) {
+      for (var i = 0; i < container.textFrames.length; i++) {
+        var item = container.textFrames[i];
+        if (item.kind !== TextType.AREATEXT) continue;
+
+        var alreadyCollected = false;
+        for (var j = 0; j < validTextFrames.length; j++) {
+          if (validTextFrames[j] === item) {
+            alreadyCollected = true;
+            break;
+          }
+        }
+        if (!alreadyCollected) validTextFrames.push(item);
+      }
+
+      for (var k = 0; k < container.groupItems.length; k++) {
+        collectAreaTextFrames(container.groupItems[k]);
+      }
+    }
+
+    // 2. If valid boxes are found, isolate selection to them and run the action
+    if (validTextFrames.length > 0) {
+        // Clear global selection first
+        app.activeDocument.selection = null;
+        
+        for (var j = 0; j < validTextFrames.length; j++) {
+            validTextFrames[j].selected = true;
+        }
+        
+        // Run the action once for the whole group
+        setTextFrameVerticalJustificationToCenter();
+    }
+
+    /**
+     * Run Illustrator's recorded action that centers text vertically in its
+     * area-text frame. The action operates on the current Illustrator
+     * selection, which is prepared by `verticalCenterTextFrame()`.
+     *
+     * @param {TextFrame} textFrame - Retained for compatibility with the
+     * original helper signature; the action uses the current selection.
+     * @returns {void} Runs the embedded alignment action.
+     */
+    function setTextFrameVerticalJustificationToCenter(textFrame) {
+      var embeddedActionData = [
+          "/version 3",
+          "/name [ 5",
+          "	5365742031",
+          "]",
+          "/isOpen 1",
+          "/actionCount 1",
+          "/action-1 {",
+          "	/name [ 8",
+          "		416374696f6e2031",
+          "	]",
+          "	/keyIndex 0",
+          "	/colorIndex 0",
+          "	/isOpen 1",
+          "	/eventCount 1",
+          "	/event-1 {",
+          "		/useRulersIn1stQuadrant 0",
+          "		/internalName (adobe_frameAlignment)",
+          "		/localizedName [ 24",
+          "			417265612054657874204672616d65416c69676e6d656e74",
+          "		]",
+          "		/isOpen 0",
+          "		/isOn 1",
+          "		/hasDialog 0",
+          "		/parameterCount 1",
+          "		/parameter-1 {",
+          "			/key 1717660782",
+          "			/showInPalette 4294967295",
+          "			/type (integer)",
+          "			/value 1",
+          "		}",
+          "	}",
+          "}"
+      ].join("\n");
+      var actionSetName = "Set 1";
+      var actionName = "Action 1";
+
+      /**
+       * Load, execute, and unload an Illustrator action from a temporary file.
+       *
+       * @param {String} data - Serialized Illustrator action data.
+       * @param {String} setName - Name of the action set to load and run.
+       * @param {String} action - Name of the action within the set to execute.
+       * @returns {void} Removes the temporary action file after execution.
+       */
+      function runEmbeddedAction(data, setName, action) {
+      // Create a temporary file to hold the action data
+      var tempFile = new File(Folder.temp + "/temp_illustrator_action.atn");
+      
+      try {
+          tempFile.open("w");
+          tempFile.write(data);
+          tempFile.close();
+          
+              // Force Illustrator to update its state before running the action
+              app.redraw(); 
+              
+              // Load and execute the action
+              app.loadAction(tempFile);
+              app.doScript(action, setName);
+              
+              // Delay unloading slightly or let Illustrator catch up
+              app.redraw();
+              app.unloadAction(setName, "");
+      } 
+      catch(error) {
+          alert("Error executing action: " + error.message);
+      } 
+      finally {
+          // Clean up and delete the temporary file from the hard drive
+          if (tempFile.exists) {
+              tempFile.remove();
+          }
+      }
+    }
+
+    // Run the function
+    runEmbeddedAction(embeddedActionData, actionSetName, actionName);
     }
   }
 
