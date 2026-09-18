@@ -2,3 +2,18 @@
 index.d.ts
 tsconfig.json
 _*.jsx*
+# Dependencies
+node_modules/
+
+# Package manager/debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build/cache output
+.rollup.cache/
+.cache/
+
+# Local logs
+*.log

@@ -3,8 +3,12 @@
     "configurations": [
         {
             "type": "extendscript-debug",
-            "request": "attach",
-            "name": "extendScript-Debug attach",
+            "request": "launch",
+            "name": "Build and Debug in Illustrator",
+            "script": "${workspaceFolder}/dist/ScreenSepMarks.jsx",
+            "hostAppSpecifier": "illustrator",
+            "engineName": "main",
+            "preLaunchTask": "Rollup: build JSX"
         }
     ]
 }

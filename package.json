@@ -1,5 +1,17 @@
 {
+  "scripts": {
+    "build:screensepmarks": "rollup -c rollup.config.mjs",
+    "watch:screensepmarks": "rollup -c rollup.config.mjs --watch"
+  },
   "dependencies": {
     "types-for-adobe": "^7.2.5"
+  },
+  "devDependencies": {
+    "eslint": "^10.10.0",
+    "rollup": "^4.63.3"
+  },
+  "allowScripts": {
+    "eslint@10.10.0": true,
+    "fsevents@2.3.3": true
   }
 }
