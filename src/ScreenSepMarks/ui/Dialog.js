@@ -3,7 +3,11 @@
   ////////////////////////
   import * as livePreview from "./preview.js"
   import * as utils from "../utils/sharedUtils.js"
+ import { defaults } from "./defaults.js";
+  var doc = app.activeDocument
   var spotColors = doc.spots;
+  
+  
   
   /**
    * Show the script settings dialog and return the selected options.
@@ -168,7 +172,7 @@ export function mainDialog(dev, scriptInfo, prefs, logger) {
         if (value.type == "?") value = UnitValue(text, defaultUnit);
         value = value.as("pt");
         if (isNaN(value) || value < 0) value = fallback;
-      } catch (e) {
+      } catch (e) {      
         value = fallback;
       }
       return value;

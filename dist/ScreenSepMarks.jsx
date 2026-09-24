@@ -385,7 +385,9 @@ Changelog
   //////////////////////////////
   // SCRIPT DRAWING FUNCTIONS //
   //////////////////////////////
-
+  var doc$1 = app.activeDocument;
+  var swatches = doc$1.swatches;
+  var spotColors$1 = doc$1.spots;
   /**
    * Find or create a work layer for the script and clear its contents if necessary.
    *
@@ -427,10 +429,10 @@ Changelog
    * @param {String} name - Spot swatch name to look up.
    * @returns {Spot} The requested spot swatch or the registration swatch.
    */
-  function getSpotColor(name, logger, swatches, spotColors) {
+  function getSpotColor(name, logger) {
       var color;
       try {
-          color = spotColors.getByName(name);
+          color = spotColors$1.getByName(name);
       } catch (e) {
           $.writeln(e.message);
           logger.log(
@@ -448,7 +450,7 @@ Changelog
    * @param {Layer} layer - The layer where marks should be created.
    * @param {Settings} settings - Dialog settings controlling placement, size, color, and inset.
    */
-  function drawMarks(layer, settings, logger, swatches, spotColors) {
+  function drawMarks(layer, settings, logger) {
       var doc = app.activeDocument;
       // convert provided inputs to points
       var size = UnitValue(settings.size).as("pt");
@@ -456,7 +458,7 @@ Changelog
       var inset = UnitValue(settings.inset).as("pt");
       // make sure spot color is available
       var color = new SpotColor();
-      color.spot = getSpotColor(settings.color, logger, swatches, spotColors);
+      color.spot = getSpotColor(settings.color, logger);
 
       //invert inset value, if applicable
       if (settings.invertinset) {
@@ -637,7 +639,7 @@ Changelog
    * @param {Layer} layer - The layer to add text frames to.
    * @param {Settings} settings - Dialog settings controlling which text output is created.
    */
-  function writeInfo(layer, settings, swatches, spotColors) {
+  function writeInfo(layer, settings) {
       var registrationColor = swatches.getByName("[Registration]");
       //insert blank textbox for custom data
       if (settings.blanktextbox) {
@@ -649,7 +651,7 @@ Changelog
           spotColorTextFrame.top =
           settings.position == "Top"
               ? 0
-              : -doc.height + spotColorTextFrame.height;
+              : -doc$1.height + spotColorTextFrame.height;
 
 
           // add spot color name to text frame
@@ -662,7 +664,7 @@ Changelog
               : Justification.LEFT;
           spotColorTextFrame.left =
           settings.alignment == "Right"
-              ? doc.width - spotColorTextFrame.width
+              ? doc$1.width - spotColorTextFrame.width
               : 0;
       }
       // insert spot color info first
@@ -674,12 +676,12 @@ Changelog
           spotColorTextFrame.top =
           settings.position == "Top"
               ? 0
-              : -doc.height + spotColorTextFrame.height;
+              : -doc$1.height + spotColorTextFrame.height;
 
           // add each spot color (and color characters)
           var spotColor, tr;
-          for (var i = 0; i < spotColors.length; i++) {
-          spotColor = doc.swatches.getByName(spotColors[i].name);
+          for (var i = 0; i < spotColors$1.length; i++) {
+          spotColor = doc$1.swatches.getByName(spotColors$1[i].name);
 
           // skip registration color
           if (spotColor.name == "[Registration]") continue;
@@ -701,12 +703,12 @@ Changelog
               : Justification.LEFT;
           spotColorTextFrame.left =
           settings.alignment == "Right"
-              ? doc.width - spotColorTextFrame.width
+              ? doc$1.width - spotColorTextFrame.width
               : 0;
       }
 
       var infoItems = [];
-      if (settings.file) infoItems.push(doc.name);
+      if (settings.file) infoItems.push(doc$1.name);
       if (settings.timestamp) {
           var timestamp = new Date();
           infoItems.push(timestamp.toLocaleString());
@@ -720,9 +722,9 @@ Changelog
           infoTextFrame.textRange.justification =
           settings.alignment == "Left" ? Justification.RIGHT : Justification.LEFT;
           infoTextFrame.top =
-          settings.position == "Top" ? 0 : -doc.height + infoTextFrame.height;
+          settings.position == "Top" ? 0 : -doc$1.height + infoTextFrame.height;
           infoTextFrame.left =
-          settings.alignment == "Left" ? doc.width - infoTextFrame.width : 0;
+          settings.alignment == "Left" ? doc$1.width - infoTextFrame.width : 0;
       }
   }
 
@@ -798,7 +800,7 @@ Changelog
        * original helper signature; the action uses the current selection.
        * @returns {void} Runs the embedded alignment action.
        */
-      function setTextFrameVerticalJustificationToCenter(textFrame) {
+      function setTextFrameVerticalJustificationToCenter() {
           var embeddedActionData = [
           "/version 3",
           "/name [ 5",
@@ -840,43 +842,44 @@ Changelog
            * Load, execute, and unload an Illustrator action from a temporary file.
            *
            * @param {String} data - Serialized Illustrator action data.
-           * @param {String} setName - Name of the action set to load and run.
-           * @param {String} action - Name of the action within the set to execute.
            * @returns {void} Removes the temporary action file after execution.
            */
-          function runEmbeddedAction(data, setName, action) {
-          // Create a temporary file to hold the action data
-          var tempFile = new File(Folder.temp + "/temp_illustrator_action.atn");
+          function runEmbeddedAction(data, action, setName) {
+              
 
-          try {
-              tempFile.open("w");
-              tempFile.write(data);
-              tempFile.close();
+              // Create a temporary file to hold the action data
+              
+              var tempFile = new File(Folder.temp + "/temp_illustrator_action.atn");
 
-              // Force Illustrator to update its state before running the action
-              app.redraw();
+              try {
+                  tempFile.open("w");
+                  tempFile.write(data);
+                  tempFile.close();
 
-              // Load and execute the action
-              app.loadAction(tempFile);
-              app.doScript(action, setName);
+                  // Force Illustrator to update its state before running the action
+                  app.redraw();
 
-              // Delay unloading slightly or let Illustrator catch up
-              app.redraw();
-              app.unloadAction(setName, "");
-          }
-          catch (error) {
-              alert("Error executing action: " + error.message);
-          }
-          finally {
-              // Clean up and delete the temporary file from the hard drive
-              if (tempFile.exists) {
-              tempFile.remove();
+                  // Load and execute the action
+                  app.loadAction(tempFile);
+                  app.doScript(action, setName);
+
+                  // Delay unloading slightly or let Illustrator catch up
+                  app.redraw();
+                  app.unloadAction(setName, "");
               }
-          }
+              catch (error) {
+                  alert("Error executing action: " + error.message);
+              }
+              finally {
+                  // Clean up and delete the temporary file from the hard drive
+                  if (tempFile.exists) {
+                  tempFile.remove();
+                  }
+              }
           }
 
           // Run the function
-          runEmbeddedAction(embeddedActionData, actionSetName, actionName);
+          runEmbeddedAction(embeddedActionData, actionName, actionSetName);
       } 
   }
 
@@ -1305,8 +1308,80 @@ Changelog
       };
     }
 
+  /**
+     * Settings object used for dialog state and saved presets.
+     * @typedef {Object} Settings
+     * @property {Boolean} tl - Top-left registration mark enabled.
+     * @property {Boolean} tc - Top-center registration mark enabled.
+     * @property {Boolean} tr - Top-right registration mark enabled.
+     * @property {Boolean} cl - Center-left registration mark enabled.
+     * @property {Boolean} cc - Center-center registration mark enabled.
+     * @property {Boolean} cr - Center-right registration mark enabled.
+     * @property {Boolean} bl - Bottom-left registration mark enabled.
+     * @property {Boolean} bc - Bottom-center registration mark enabled.
+     * @property {Boolean} br - Bottom-right registration mark enabled.
+    * @property {String} tlText - Text for the top-left registration mark.
+    * @property {String} trText - Text for the top-right registration mark.
+    * @property {String} blText - Text for the bottom-left registration mark.
+    * @property {String} brText - Text for the bottom-right registration mark.
+     * @property {String} size - Mark size, stored as a unit string.
+     * @property {String} stroke - Stroke width, stored as a unit string.
+     * @property {String} inset - Inset distance from artboard edge, stored as a unit string.
+     * @property {Boolean} invertinset - Whether inset is inverted.
+    * @property {Boolean} saveSpaceHorizontal - Move left and right marks inward by one mark size.
+    * @property {Boolean} saveSpaceVertical - Move top and bottom marks inward by one mark size.
+     * @property {String} color - Spot swatch name used for registration marks.
+     * @property {Boolean} blanktextbox - Whether to add a blank custom text box.
+     * @property {Boolean} spots - Whether to add spot color names to the artwork.
+     * @property {Boolean} file - Whether to include file information text.
+     * @property {Boolean} timestamp - Whether to include timestamp text.
+     * @property {String} position - Output text vertical position, either "Top" or "Bottom".
+     * @property {String} alignment - Output text horizontal alignment, either "Left" or "Right".
+     */
+    
+    // TODO: Find a better way to do this settings thingy - it seems wrong somehow
+    
+    
+    
+    var defaults = {};
+    /**
+     * Built-in default settings stored as the "[Default]" preset.
+     */
+    defaults["[Default]"] = {
+      tl: true,
+      tc: true,
+      tr: true,
+      cl: false,
+      cc: false,
+      cr: false,
+      bl: true,
+      bc: false,
+      br: true,
+      tlText: "Add custom info here.",
+      trText: "Add custom info here.",
+      blText: "Add custom info here.",
+      brText: "Add custom info here.",
+      size: "0.8 in",
+      stroke: "1.0 pt",
+      inset: "0.2 in",
+      color: "[Registration]",
+      invertinset: true,
+      saveSpaceHorizontal: false,
+      saveSpaceVertical: false,
+      blanktextbox: true,
+      spots: false,
+      file: false,
+      timestamp: false,
+      position: "Top",
+      alignment: "Left",
+      referenceObject: 1
+    };
+
   ////////////////////////
-    var spotColors$1 = doc.spots;
+    var doc = app.activeDocument;
+    var spotColors = doc.spots;
+    
+    
     
     /**
      * Show the script settings dialog and return the selected options.
@@ -1325,8 +1400,8 @@ Changelog
 
       // dropdown options
       var arrSpotColors = [];
-      for (var i = 0; i < spotColors$1.length; i++) {
-        arrSpotColors.push(spotColors$1[i].name);
+      for (var i = 0; i < spotColors.length; i++) {
+        arrSpotColors.push(spotColors[i].name);
       }
       var arrPosition = ["Top", "Bottom"];
       var arrAlignment = ["Left", "Right"];
@@ -2233,54 +2308,6 @@ Changelog
       }
     }
 
-  /*
-  ScreenSepMarks.jsx for Adobe Illustrator
-  ---------------------------------------
-  Easily add screen printing registration marks
-  and spot color info to the current document.
-
-  Author
-  ------
-  Josh Duncan
-  joshbduncan@gmail.com
-  https://joshbduncan.com
-  https://github.com/joshbduncan/
-
-  Wanna Support Me?
-  -----------------
-  Most of the things I make are free to download but if you would like
-  to support me that would be awesome and greatly appreciated!
-  https://joshbduncan.com/software.html
-
-  License
-  -------
-  This script is distributed under the MIT License.
-  See the LICENSE file for details.
-
-  Changelog
-  ---------
-  1.0.0            initial release
-  1.0.1            updated placement from dropdown to anchor checkboxes
-  1.0.2            added unit specifier to size, stroke, and inset along with converter function
-  1.0.3            added custom color selector
-  1.0.4            added file info, date, and time output options
-  1.0.5            rebuilt entire setting dialog
-  1.0.6            last used settings now save to preferences and auto-load on next run
-  1.1.0            added save/delete presets feature with a new save/replace dialog
-  1.1.1            setup defaults `[Default]` that save to preferences and load on first run, can be updated by user
-  1.1.2            took previous last used setting and added them to dropdown selection as [Last Used]
-  1.1.3            any changes to settings now empties preset dropdown selection to clear confusion
-  1.1.4            cleaned up a bug when no spot colors were found or no info was requested
-  1.1.5            all new save settings function that uses a separate instead of clogging up app.preferences
-  1.2.0            works with any spot color names, updated file info, updated saved settings/preferences
-  1.2.1 2025-02-06 fixed preset overwrite protection
-  1.2.2 2025-06-20 fixed input validation
-  1.2.3 2026-03-12 fixed registration marks to use actual spot color
-  1.2.4 2026-04-09 fix nested target directive
-  */
-
-
-
   (function () {
     var scriptInfo = {
       title: "Screen Print Separation Marks",
@@ -2301,74 +2328,9 @@ Changelog
       return;
     }
 
-    /**
-     * Settings object used for dialog state and saved presets.
-     * @typedef {Object} Settings
-     * @property {Boolean} tl - Top-left registration mark enabled.
-     * @property {Boolean} tc - Top-center registration mark enabled.
-     * @property {Boolean} tr - Top-right registration mark enabled.
-     * @property {Boolean} cl - Center-left registration mark enabled.
-     * @property {Boolean} cc - Center-center registration mark enabled.
-     * @property {Boolean} cr - Center-right registration mark enabled.
-     * @property {Boolean} bl - Bottom-left registration mark enabled.
-     * @property {Boolean} bc - Bottom-center registration mark enabled.
-     * @property {Boolean} br - Bottom-right registration mark enabled.
-    * @property {String} tlText - Text for the top-left registration mark.
-    * @property {String} trText - Text for the top-right registration mark.
-    * @property {String} blText - Text for the bottom-left registration mark.
-    * @property {String} brText - Text for the bottom-right registration mark.
-     * @property {String} size - Mark size, stored as a unit string.
-     * @property {String} stroke - Stroke width, stored as a unit string.
-     * @property {String} inset - Inset distance from artboard edge, stored as a unit string.
-     * @property {Boolean} invertinset - Whether inset is inverted.
-    * @property {Boolean} saveSpaceHorizontal - Move left and right marks inward by one mark size.
-    * @property {Boolean} saveSpaceVertical - Move top and bottom marks inward by one mark size.
-     * @property {String} color - Spot swatch name used for registration marks.
-     * @property {Boolean} blanktextbox - Whether to add a blank custom text box.
-     * @property {Boolean} spots - Whether to add spot color names to the artwork.
-     * @property {Boolean} file - Whether to include file information text.
-     * @property {Boolean} timestamp - Whether to include timestamp text.
-     * @property {String} position - Output text vertical position, either "Top" or "Bottom".
-     * @property {String} alignment - Output text horizontal alignment, either "Left" or "Right".
-     */
-    var defaults = {};
-    /**
-     * Built-in default settings stored as the "[Default]" preset.
-     */
-    defaults["[Default]"] = {
-      tl: true,
-      tc: true,
-      tr: true,
-      cl: false,
-      cc: false,
-      cr: false,
-      bl: true,
-      bc: false,
-      br: true,
-      tlText: "Add custom info here.",
-      trText: "Add custom info here.",
-      blText: "Add custom info here.",
-      brText: "Add custom info here.",
-      size: "0.8 in",
-      stroke: "1.0 pt",
-      inset: "0.2 in",
-      color: "[Registration]",
-      invertinset: true,
-      saveSpaceHorizontal: false,
-      saveSpaceVertical: false,
-      blanktextbox: true,
-      spots: false,
-      file: false,
-      timestamp: false,
-      position: "Top",
-      alignment: "Left",
-      referenceObject: 1
-    };
-    // TODO: Find a better way to do this settings thingy - it seems wrong somehow
 
     // grab document and swatch info
     var doc = app.activeDocument;
-
 
     // set development mode
     var dev = true;
@@ -2398,14 +2360,17 @@ Changelog
     var layer = createWorkLayer("SEPMARKS", logger);
 
     // try {
-      drawMarks(layer, settings, logger, swatches, spotColors);
-      writeInfo(layer, settings, swatches, spotColors);
+      drawMarks(layer, settings, logger);
+      writeInfo(layer, settings);
     // } catch (e) {
     //   logger.log("ERROR!", $.fileName + ":" + $.line, e);
     //   alert("ERROR!\n" + e.message);
     //   layer.remove();
     //   return;
     // }
+
+    // This try-catch was removed because it was catching the error and not causing an exception in the debugger so I was unable to find exactly where things were happening.
+
 
     // place layer in correct position and don't lock it
     layer.zOrderPosition = -1;

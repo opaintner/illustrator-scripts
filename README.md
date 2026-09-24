@@ -8,6 +8,13 @@ Welcome to my playground for Adobe Illustrator scripting. Along with the scripts
 2. Install script files from the `jsx` directory into your Presets folder ([learn how](https://www.marspremedia.com/software/how-to-adobe-cc)).
 3. Restart Illustrator.
 
+**Development**
+A bunch of changes have been made to this repository since it was forked! In order to work on Screensepmarks:
+1. Run npm install to install dependencies for stuff like rollup
+2. run the scripts located in package.json in order to build to a JSX and eval in adobe
+3. For debug, make sure Illustrator is running and run the debug task. It should build screensepmarks to a jsx with rollup, attach the debugger to Illustrator, and then run the script so it can be debugged. Any breakpoints will have to be added in the .jsx as opposed to the source .js files.
+
+
 **Script Categories**
 
 - [Alignment Scripts](#alignment-scripts)

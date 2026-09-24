@@ -1,7 +1,9 @@
 //////////////////////////////
 // SCRIPT DRAWING FUNCTIONS //
 //////////////////////////////
-
+var doc = app.activeDocument;
+var swatches = doc.swatches;
+var spotColors = doc.spots;
 /**
  * Find or create a work layer for the script and clear its contents if necessary.
  *
@@ -43,7 +45,7 @@ var document = app.activeDocument;
  * @param {String} name - Spot swatch name to look up.
  * @returns {Spot} The requested spot swatch or the registration swatch.
  */
-function getSpotColor(name, logger, swatches, spotColors) {
+function getSpotColor(name, logger) {
     var color;
     try {
         color = spotColors.getByName(name);
@@ -64,7 +66,7 @@ function getSpotColor(name, logger, swatches, spotColors) {
  * @param {Layer} layer - The layer where marks should be created.
  * @param {Settings} settings - Dialog settings controlling placement, size, color, and inset.
  */
-export function drawMarks(layer, settings, logger, swatches, spotColors) {
+export function drawMarks(layer, settings, logger) {
     var doc = app.activeDocument;
     // convert provided inputs to points
     var size = UnitValue(settings.size).as("pt");
@@ -72,7 +74,7 @@ export function drawMarks(layer, settings, logger, swatches, spotColors) {
     var inset = UnitValue(settings.inset).as("pt");
     // make sure spot color is available
     var color = new SpotColor();
-    color.spot = getSpotColor(settings.color, logger, swatches, spotColors);
+    color.spot = getSpotColor(settings.color, logger);
 
     //invert inset value, if applicable
     if (settings.invertinset) {
@@ -253,7 +255,7 @@ function makeReg(layer, x, y, size, color, rotation, strokeWeight, center, name,
  * @param {Layer} layer - The layer to add text frames to.
  * @param {Settings} settings - Dialog settings controlling which text output is created.
  */
-export function writeInfo(layer, settings, swatches, spotColors) {
+export function writeInfo(layer, settings) {
     var registrationColor = swatches.getByName("[Registration]");
     //insert blank textbox for custom data
     if (settings.blanktextbox) {
@@ -414,7 +416,7 @@ function verticalCenterTextFrame(layer) {
      * original helper signature; the action uses the current selection.
      * @returns {void} Runs the embedded alignment action.
      */
-    function setTextFrameVerticalJustificationToCenter(textFrame) {
+    function setTextFrameVerticalJustificationToCenter() {
         var embeddedActionData = [
         "/version 3",
         "/name [ 5",
@@ -456,42 +458,43 @@ function verticalCenterTextFrame(layer) {
          * Load, execute, and unload an Illustrator action from a temporary file.
          *
          * @param {String} data - Serialized Illustrator action data.
-         * @param {String} setName - Name of the action set to load and run.
-         * @param {String} action - Name of the action within the set to execute.
          * @returns {void} Removes the temporary action file after execution.
          */
-        function runEmbeddedAction(data, setName, action) {
-        // Create a temporary file to hold the action data
-        var tempFile = new File(Folder.temp + "/temp_illustrator_action.atn");
+        function runEmbeddedAction(data, action, setName) {
+            
 
-        try {
-            tempFile.open("w");
-            tempFile.write(data);
-            tempFile.close();
+            // Create a temporary file to hold the action data
+            
+            var tempFile = new File(Folder.temp + "/temp_illustrator_action.atn");
 
-            // Force Illustrator to update its state before running the action
-            app.redraw();
+            try {
+                tempFile.open("w");
+                tempFile.write(data);
+                tempFile.close();
 
-            // Load and execute the action
-            app.loadAction(tempFile);
-            app.doScript(action, setName);
+                // Force Illustrator to update its state before running the action
+                app.redraw();
 
-            // Delay unloading slightly or let Illustrator catch up
-            app.redraw();
-            app.unloadAction(setName, "");
-        }
-        catch (error) {
-            alert("Error executing action: " + error.message);
-        }
-        finally {
-            // Clean up and delete the temporary file from the hard drive
-            if (tempFile.exists) {
-            tempFile.remove();
+                // Load and execute the action
+                app.loadAction(tempFile);
+                app.doScript(action, setName);
+
+                // Delay unloading slightly or let Illustrator catch up
+                app.redraw();
+                app.unloadAction(setName, "");
             }
-        }
+            catch (error) {
+                alert("Error executing action: " + error.message);
+            }
+            finally {
+                // Clean up and delete the temporary file from the hard drive
+                if (tempFile.exists) {
+                tempFile.remove();
+                }
+            }
         }
 
         // Run the function
-        runEmbeddedAction(embeddedActionData, actionSetName, actionName);
+        runEmbeddedAction(embeddedActionData, actionName, actionSetName);
     } 
 }
